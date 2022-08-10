@@ -1,9 +1,10 @@
 import * as React from 'react';
 import type { NextPage } from 'next';
 import Head from 'next/head';
-import styles from '../styles/Home.module.css';
-import ChatBubble from '../components/ChatBubble';
 import { IoSend } from 'react-icons/io5';
+import ChatBubble from '../components/ChatBubble';
+import { useUser } from '../context/UserContext';
+import styles from '../styles/Home.module.css';
 
 export type Message = {
   text: string;
@@ -65,8 +66,17 @@ const defaultMessages: Message[] = [
 ];
 
 const Home: NextPage = () => {
+  const [nameInput, setNameInput] = React.useState('');
   const [messages, setMessages] = React.useState<Message[]>(defaultMessages);
   const endOfChatRef = React.useRef<HTMLDivElement | null>(null);
+
+  const { state, dispatch } = useUser();
+
+  const handleNameSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    dispatch({ type: 'populate', payload: nameInput });
+    setNameInput('');
+  };
 
   return (
     <div className={styles.container}>
@@ -97,6 +107,25 @@ const Home: NextPage = () => {
             </div>
           </form>
         </div>
+
+        {state.name === '' && (
+          <div className={styles.backdrop}>
+            <div className={styles.modal_content}>
+              <h1>Hi👋</h1>
+              <span>Please enter your username</span>
+              <form onSubmit={handleNameSubmit}>
+                <input
+                  type='text'
+                  name='username'
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  className={styles.input_username}
+                />
+                <button className={styles.button_primary}>Enter</button>
+              </form>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

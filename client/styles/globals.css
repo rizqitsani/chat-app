@@ -15,6 +15,15 @@ a {
   box-sizing: border-box;
 }
 
+h1 {
+  font-size: 1.75rem;
+  margin: 0;
+}
+
 p {
   margin: 0;
+}
+
+span {
+  font-size: 0.875rem;
 }
