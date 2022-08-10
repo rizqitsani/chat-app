@@ -5,6 +5,7 @@ import { IoSend } from 'react-icons/io5';
 import ChatBubble from '../components/ChatBubble';
 import { useUser } from '../context/UserContext';
 import styles from '../styles/Home.module.css';
+import { io } from 'socket.io-client';
 
 export type Message = {
   text: string;
@@ -12,70 +13,62 @@ export type Message = {
   createdAt: string;
 };
 
-const defaultMessages: Message[] = [
-  {
-    text: 'Hey Travis! Would you like to go out for a coffee?',
-    name: 'others',
-    createdAt: '20:21',
-  },
-  {
-    text: 'Sure! At 11:00 am?',
-    name: 'me',
-    createdAt: '20:22',
-  },
-  {
-    text: "That's too early! How about at noon?",
-    name: 'others',
-    createdAt: '20:22',
-  },
-  {
-    text: 'That sounds good as well. Where should we meet?',
-    name: 'me',
-    createdAt: '20:23',
-  },
-  {
-    text: 'Meet me at the hardware store on 21 Duck Street.',
-    name: 'others',
-    createdAt: '20:23',
-  },
-  {
-    text: "Sounds good. I'll bring my friend with me as well!",
-    name: 'me',
-    createdAt: '20:24',
-  },
-  {
-    text: 'Which one? The developer or the designer?',
-    name: 'others',
-    createdAt: '20:24',
-  },
-  {
-    text: 'The developer. You remember Tony, right?',
-    name: 'me',
-    createdAt: '20:24',
-  },
-  {
-    text: "Yeah! Tony's a great guy!",
-    name: 'others',
-    createdAt: '20:25',
-  },
-  {
-    text: 'Indeed he is! Alright, see you later 👋!',
-    name: 'me',
-    createdAt: '20:25',
-  },
-];
+type JoinResponse = {
+  clients: string[];
+  messages: Message[];
+};
+
+const socket = io('http://localhost:5000');
 
 const Home: NextPage = () => {
   const [nameInput, setNameInput] = React.useState('');
-  const [messages, setMessages] = React.useState<Message[]>(defaultMessages);
+  const [messageInput, setMessageInput] = React.useState('');
+  const [messages, setMessages] = React.useState<Message[]>([]);
+  const [isJoined, setIsJoined] = React.useState(false);
   const endOfChatRef = React.useRef<HTMLDivElement | null>(null);
 
   const { state, dispatch } = useUser();
 
+  React.useEffect(() => {
+    socket.on('connect', () => {
+      console.log('connected');
+    });
+
+    socket.on('message', (message: Message) => {
+      setMessages((prevMessages) => [...prevMessages, message]);
+    });
+
+    return () => {
+      socket.off('connect');
+      socket.off('message');
+    };
+  }, []);
+
+  // Scroll to bottom of chat when new message is received
+  React.useEffect(() => {
+    endOfChatRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
   const handleNameSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
     dispatch({ type: 'populate', payload: nameInput });
     setNameInput('');
+
+    socket.emit('join', { name: nameInput }, (response: JoinResponse) => {
+      setIsJoined(true);
+      setMessages(response.messages);
+    });
+  };
+
+  const handleMessageSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    if (messageInput !== '') {
+      socket.emit('createMessage', { text: messageInput }, () => {
+        setMessageInput('');
+      });
+    }
   };
 
   return (
@@ -88,16 +81,19 @@ const Home: NextPage = () => {
 
       <main className={styles.main}>
         <div className={styles.chat_box}>
-          {messages?.map((message, index) => (
-            <ChatBubble key={index} message={message} />
-          ))}
+          {isJoined &&
+            messages?.map((message, index) => (
+              <ChatBubble key={index} message={message} />
+            ))}
           <div ref={endOfChatRef}></div>
         </div>
         <div className={styles.input_section}>
-          <form autoComplete='off'>
+          <form onSubmit={handleMessageSubmit} autoComplete='off'>
             <div className={styles.input_container}>
               <input
                 type='text'
+                value={messageInput}
+                onChange={(e) => setMessageInput(e.target.value)}
                 placeholder='Type your message'
                 className={styles.input_box}
               />
@@ -108,7 +104,7 @@ const Home: NextPage = () => {
           </form>
         </div>
 
-        {state.name === '' && (
+        {!isJoined && (
           <div className={styles.backdrop}>
             <div className={styles.modal_content}>
               <h1>Hi👋</h1>

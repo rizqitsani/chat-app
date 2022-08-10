@@ -124,7 +124,8 @@
   flex-direction: column;
   align-items: stretch;
   text-align: center;
-  width: 25%;
+  width: 90%;
+  max-width: 25rem;
   border-radius: 1rem;
   padding: 2rem;
   background: white;
