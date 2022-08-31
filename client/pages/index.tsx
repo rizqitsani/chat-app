@@ -5,7 +5,7 @@ import { IoSend } from 'react-icons/io5';
 import ChatBubble from '../components/ChatBubble';
 import { useUser } from '../context/UserContext';
 import styles from '../styles/Home.module.css';
-import { io } from 'socket.io-client';
+import { useSocket } from '../context/SocketContext';
 
 export type Message = {
   text: string;
@@ -18,8 +18,6 @@ type JoinResponse = {
   messages: Message[];
 };
 
-const socket = io('http://localhost:5000');
-
 const Home: NextPage = () => {
   const [nameInput, setNameInput] = React.useState('');
   const [messageInput, setMessageInput] = React.useState('');
@@ -27,7 +25,8 @@ const Home: NextPage = () => {
   const [isJoined, setIsJoined] = React.useState(false);
   const endOfChatRef = React.useRef<HTMLDivElement | null>(null);
 
-  const { state, dispatch } = useUser();
+  const { dispatch } = useUser();
+  const socket = useSocket();
 
   React.useEffect(() => {
     socket.on('connect', () => {
@@ -42,7 +41,7 @@ const Home: NextPage = () => {
       socket.off('connect');
       socket.off('message');
     };
-  }, []);
+  }, [socket]);
 
   // Scroll to bottom of chat when new message is received
   React.useEffect(() => {
